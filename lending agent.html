@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Индивидуальный AI-агент в Telegram</title>
+  <style>
+    :root {
+      --bg: #080a0f;
+      --bg-soft: #0f131c;
+      --panel: rgba(255, 255, 255, 0.075);
+      --panel-strong: rgba(255, 255, 255, 0.11);
+      --text: #f5f7fb;
+      --muted: #a9b2c4;
+      --line: rgba(255, 255, 255, 0.13);
+      --accent: #7dd3fc;
+      --accent-strong: #38bdf8;
+      --green: #8ee6b4;
+      --gold: #f4d28a;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 8%, rgba(56, 189, 248, 0.16), transparent 32%),
+        radial-gradient(circle at 86% 12%, rgba(142, 230, 180, 0.12), transparent 30%),
+        linear-gradient(180deg, #0b0e14 0%, #080a0f 42%, #0c0f16 100%);
+      line-height: 1.6;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .container {
+      width: min(1160px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 2;
+      padding: 22px 0;
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(125, 211, 252, 0.22), rgba(255, 255, 255, 0.06));
+      box-shadow: 0 0 26px rgba(56, 189, 248, 0.14);
+      color: var(--accent);
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    .nav-link {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 700;
+      transition: color 0.2s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--accent);
+    }
+
+    .hero {
+      position: relative;
+      padding: 42px 0 104px;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: 4%;
+      bottom: 28px;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: rgba(125, 211, 252, 0.08);
+      filter: blur(44px);
+      pointer-events: none;
+    }
+
+    .hero-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(380px, 0.85fr);
+      gap: 64px;
+      align-items: center;
+    }
+
+    .hero-grid > * {
+      min-width: 0;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 20px;
+      padding: 8px 12px;
+      border: 1px solid rgba(125, 211, 252, 0.22);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #d9f3ff;
+      font-size: 14px;
+      font-weight: 800;
+      backdrop-filter: blur(16px);
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 6px rgba(142, 230, 180, 0.12);
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      max-width: 680px;
+      margin-bottom: 22px;
+      font-size: clamp(38px, 5.2vw, 64px);
+      line-height: 1.02;
+      letter-spacing: 0;
+      overflow-wrap: break-word;
+      hyphens: auto;
+    }
+
+    .hero-text {
+      max-width: 680px;
+      margin-bottom: 30px;
+      color: var(--muted);
+      font-size: 20px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 52px;
+      padding: 14px 22px;
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      font-weight: 800;
+      line-height: 1.2;
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .button-primary {
+      border-color: rgba(125, 211, 252, 0.42);
+      background: linear-gradient(135deg, #38bdf8, #2563eb);
+      color: #ffffff;
+      box-shadow: 0 18px 36px rgba(37, 99, 235, 0.28);
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      border-color: rgba(125, 211, 252, 0.5);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+    }
+
+    .button-primary:hover {
+      background: linear-gradient(135deg, #67e8f9, #1d4ed8);
+    }
+
+    .hero-proof {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 30px;
+      max-width: 760px;
+    }
+
+    .proof-item {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.055);
+      color: var(--muted);
+      backdrop-filter: blur(14px);
+    }
+
+    .proof-item strong {
+      display: block;
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .visual {
+      position: relative;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 22px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.035));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px);
+    }
+
+    .visual::before,
+    .visual::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      pointer-events: none;
+    }
+
+    .visual::before {
+      top: -18px;
+      right: 36px;
+      width: 92px;
+      height: 92px;
+      background: rgba(125, 211, 252, 0.16);
+      filter: blur(18px);
+    }
+
+    .visual::after {
+      left: 28px;
+      bottom: -18px;
+      width: 120px;
+      height: 120px;
+      background: rgba(142, 230, 180, 0.12);
+      filter: blur(22px);
+    }
+
+    .chat {
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      background: #101520;
+    }
+
+    .chat-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .avatar {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #2563eb);
+      color: #ffffff;
+      font-weight: 900;
+    }
+
+    .chat-title {
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .chat-status {
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .chat-body {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+    }
+
+    .bubble {
+      max-width: 86%;
+      padding: 12px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .bubble.user {
+      justify-self: end;
+      border-bottom-right-radius: 5px;
+      background: rgba(56, 189, 248, 0.2);
+      color: #eaf8ff;
+    }
+
+    .bubble.agent {
+      justify-self: start;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-bottom-left-radius: 5px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #f6f8fb;
+    }
+
+    .task-strip {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      padding: 0 18px 18px;
+    }
+
+    .task-chip {
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.055);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    main {
+      display: grid;
+      gap: 88px;
+      padding: 32px 0 96px;
+    }
+
+    section {
+      margin: 0;
+    }
+
+    .section {
+      padding: 36px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.055);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(18px);
+    }
+
+    .section-head {
+      max-width: 820px;
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    .grid-3,
+    .audience-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.065);
+      transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(125, 211, 252, 0.34);
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    .card p,
+    .card span {
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .icon {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      margin-bottom: 14px;
+      border: 1px solid rgba(125, 211, 252, 0.26);
+      border-radius: var(--radius);
+      background: rgba(125, 211, 252, 0.1);
+      color: var(--accent);
+      font-weight: 900;
+    }
+
+    .feature-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .feature-list li {
+      position: relative;
+      min-height: 62px;
+      padding: 16px 16px 16px 44px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.055);
+      color: #e8edf7;
+      font-weight: 700;
+    }
+
+    .feature-list li::before {
+      content: "";
+      position: absolute;
+      top: 22px;
+      left: 18px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(142, 230, 180, 0.45);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      counter-reset: steps;
+    }
+
+    .step {
+      position: relative;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.065);
+      counter-increment: steps;
+    }
+
+    .step::before {
+      content: "0" counter(steps);
+      display: inline-flex;
+      margin-bottom: 28px;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .step h3 {
+      margin-bottom: 8px;
+      font-size: 19px;
+      line-height: 1.28;
+    }
+
+    .step p {
+      margin-bottom: 0;
+      color: var(--muted);
+    }
+
+    .price-box {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .price-main {
+      padding: 28px;
+      border: 1px solid rgba(125, 211, 252, 0.18);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(145deg, rgba(56, 189, 248, 0.13), rgba(255, 255, 255, 0.055)),
+        rgba(255, 255, 255, 0.055);
+    }
+
+    .price-main h3,
+    .expenses h3 {
+      margin-bottom: 12px;
+      font-size: 24px;
+      line-height: 1.25;
+    }
+
+    .price-main p {
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .price-note {
+      margin-top: 18px;
+      padding: 16px;
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      background: rgba(125, 211, 252, 0.08);
+      color: #dff6ff;
+      font-weight: 800;
+    }
+
+    .expenses {
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.065);
+    }
+
+    .expense-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .expense-item:last-child {
+      border-bottom: 0;
+    }
+
+    .expense-item strong {
+      color: var(--gold);
+      white-space: nowrap;
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .compare-card {
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .compare-card.good {
+      border-color: rgba(142, 230, 180, 0.32);
+      background: rgba(142, 230, 180, 0.075);
+    }
+
+    .compare-card h3 {
+      margin-bottom: 14px;
+      font-size: 22px;
+    }
+
+    .plain-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--muted);
+    }
+
+    .plain-list li {
+      position: relative;
+      padding-left: 22px;
+    }
+
+    .plain-list li::before {
+      content: "";
+      position: absolute;
+      top: 10px;
+      left: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.32);
+    }
+
+    .compare-card.good .plain-list li::before {
+      background: var(--green);
+    }
+
+    .final {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: center;
+      padding: 40px;
+      border: 1px solid rgba(125, 211, 252, 0.24);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(125, 211, 252, 0.16), transparent 34%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.055));
+      box-shadow: var(--shadow);
+    }
+
+    .final h2 {
+      margin-bottom: 10px;
+    }
+
+    .final p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    footer {
+      padding: 28px 0 36px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 14px;
+    }
+
+    @media (max-width: 1180px) {
+      .hero-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1,
+      .hero-text {
+        max-width: 860px;
+      }
+
+      .visual {
+        max-width: 620px;
+        margin: 0 auto;
+      }
+    }
+
+    @media (max-width: 980px) {
+      main {
+        gap: 70px;
+        padding-bottom: 82px;
+      }
+
+      .hero-grid,
+      .price-box,
+      .final {
+        grid-template-columns: 1fr;
+      }
+
+      .visual {
+        max-width: 560px;
+        margin: 0 auto;
+      }
+
+      .grid-3,
+      .audience-grid,
+      .feature-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .steps {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .final .button {
+        justify-self: start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        width: min(100% - 28px, 1160px);
+      }
+
+      main {
+        gap: 52px;
+        padding: 18px 0 64px;
+      }
+
+      .topbar {
+        padding: 16px 0 6px;
+      }
+
+      .nav-link {
+        display: none;
+      }
+
+      .hero {
+        padding: 28px 0 46px;
+      }
+
+      h1 {
+        font-size: clamp(34px, 12vw, 48px);
+      }
+
+      .hero-text,
+      .lead,
+      .price-main p,
+      .final p {
+        font-size: 16px;
+      }
+
+      .actions,
+      .button {
+        width: 100%;
+      }
+
+      .hero-proof,
+      .grid-3,
+      .grid-2,
+      .audience-grid,
+      .feature-list,
+      .steps,
+      .compare,
+      .task-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .visual {
+        padding: 12px;
+        border-radius: 18px;
+      }
+
+      .chat-body {
+        padding: 14px;
+      }
+
+      .bubble {
+        max-width: 94%;
+      }
+
+      .section,
+      .final,
+      .price-main,
+      .expenses {
+        padding: 22px;
+      }
+
+      .section {
+        border-radius: 14px;
+      }
+
+      .expense-item {
+        display: block;
+      }
+
+      .expense-item strong {
+        display: block;
+        margin-top: 4px;
+      }
+
+      .final .button {
+        justify-self: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="#top" aria-label="AI-агент в Telegram">
+        <span class="brand-mark">AI</span>
+        <span>Персональный агент</span>
+      </a>
+      <!-- Замените USERNAME в Telegram-ссылках на ваш username: https://t.me/USERNAME -->
+      <a class="nav-link" href="https://t.me/rouuz">Написать в Telegram</a>
+    </div>
+  </header>
+
+  <section class="hero" id="top">
+    <div class="container hero-grid">
+      <div>
+        <p class="eyebrow">AI-помощник под вашу реальную работу</p>
+        <h1>Индивидуальный AI-агент под вашу работу и задачи</h1>
+        <p class="hero-text">
+          Создам персонального помощника в Telegram, который будет настроен под ваш стиль общения,
+          сферу деятельности и ежедневные задачи.
+        </p>
+        <div class="actions">
+          <a class="button button-primary" href="https://t.me/rouuz">Написать в Telegram</a>
+        </div>
+        <div class="hero-proof" aria-label="Кратко об услуге">
+          <div class="proof-item"><strong>Под вас</strong>стиль, роль и логика общения</div>
+          <div class="proof-item"><strong>В Telegram</strong>без сложных сервисов</div>
+          <div class="proof-item"><strong>Гибко</strong>функции под реальные задачи</div>
+        </div>
+      </div>
+
+      <div class="visual" aria-label="Мокап Telegram-чата с AI-агентом">
+        <div class="chat">
+          <div class="chat-head">
+            <div class="avatar">AI</div>
+            <div>
+              <div class="chat-title">Ваш AI-агент</div>
+              <div class="chat-status">работает в Telegram</div>
+            </div>
+          </div>
+          <div class="chat-body">
+            <div class="bubble user">Мне нужен помощник для клиентов, текстов и планов на неделю.</div>
+            <div class="bubble agent">Понял. Настрою агента под вашу сферу, тон общения и ежедневные процессы.</div>
+            <div class="bubble user">Хочу, чтобы он отвечал спокойно и по делу.</div>
+            <div class="bubble agent">Добавлю деловой стиль, сценарии ответов и логику работы с задачами.</div>
+          </div>
+          <div class="task-strip">
+            <div class="task-chip">Тексты и идеи</div>
+            <div class="task-chip">Планы и задачи</div>
+            <div class="task-chip">Клиенты</div>
+            <div class="task-chip">Документы</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main>
+    <section class="container section">
+      <div class="section-head">
+        <h2>Это не шаблонный бот</h2>
+        <p class="lead">
+          Индивидуальный AI-агент создается под конкретного человека, поэтому он лучше понимает
+          контекст, стиль общения и задачи, с которыми вы сталкиваетесь каждый день.
+        </p>
+      </div>
+      <div class="grid-3">
+        <article class="card">
+          <div class="icon">01</div>
+          <strong>Настраивается под человека</strong>
+          <span>Агент учитывает вашу сферу, стиль общения и задачи.</span>
+        </article>
+        <article class="card">
+          <div class="icon">02</div>
+          <strong>Работает прямо в Telegram</strong>
+          <span>Не нужно разбираться в сложных сервисах — все доступно в привычном мессенджере.</span>
+        </article>
+        <article class="card">
+          <div class="icon">03</div>
+          <strong>Может выполнять разные функции</strong>
+          <span>От помощи с текстами и планами до работы с клиентами, документами и ежедневными процессами.</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="container section">
+      <div class="section-head">
+        <h2>Что можно настроить</h2>
+        <p class="lead">
+          Агент может быть простым помощником для рутины или более сложной системой под ваши рабочие процессы.
+        </p>
+      </div>
+      <ul class="feature-list">
+        <li>Стиль общения агента</li>
+        <li>Его роль и поведение</li>
+        <li>Функции под вашу работу</li>
+        <li>Ответы под вашу сферу деятельности</li>
+        <li>Помощь с ежедневными задачами</li>
+        <li>Удобный формат взаимодействия в Telegram</li>
+        <li>Агента любой сложности, если это технически возможно</li>
+      </ul>
+    </section>
+
+    <section class="container section">
+      <div class="section-head">
+        <h2>Кому подойдет</h2>
+        <p class="lead">
+          Персональный агент особенно полезен тем, кто хочет меньше тратить времени на повторяющиеся задачи.
+        </p>
+      </div>
+      <div class="audience-grid">
+        <article class="card"><strong>Предпринимателям</strong><p>Чтобы быстрее разбирать идеи, клиентов и операционные задачи.</p></article>
+        <article class="card"><strong>Экспертам</strong><p>Для текстов, планов, материалов и подготовки ответов аудитории.</p></article>
+        <article class="card"><strong>Блогерам</strong><p>Для контента, рубрик, сценариев, идей и ежедневной структуры.</p></article>
+        <article class="card"><strong>Менеджерам</strong><p>Для задач, переписок, планирования и рабочих документов.</p></article>
+        <article class="card"><strong>Специалистам</strong><p>Для помощи в любой сфере, где есть повторяющиеся процессы.</p></article>
+        <article class="card"><strong>Студентам</strong><p>Для обучения, конспектов, планов и понятного объяснения сложных тем.</p></article>
+        <article class="card"><strong>Тем, кто автоматизирует рутину</strong><p>Чтобы разгрузить голову и быстрее выполнять ежедневные дела.</p></article>
+        <article class="card"><strong>Тем, кому нужен AI-помощник под себя</strong><p>С личным стилем, задачами и удобным форматом работы.</p></article>
+      </div>
+    </section>
+
+    <section class="container section">
+      <div class="section-head">
+        <h2>Как проходит работа</h2>
+        <p class="lead">Процесс простой и понятный: от обсуждения задач до готового помощника в Telegram.</p>
+      </div>
+      <div class="steps">
+        <article class="step">
+          <h3>Обсуждаем ваши задачи</h3>
+          <p>Я узнаю, чем вы занимаетесь, какие процессы хотите упростить и какой агент вам нужен.</p>
+        </article>
+        <article class="step">
+          <h3>Продумываем логику агента</h3>
+          <p>Определяем роль, стиль общения, функции и сценарии использования.</p>
+        </article>
+        <article class="step">
+          <h3>Создаю и настраиваю агента</h3>
+          <p>Собираю персонального AI-помощника под ваши требования.</p>
+        </article>
+        <article class="step">
+          <h3>Передаю и объясняю</h3>
+          <p>Показываю, как пользоваться агентом, и при необходимости помогаю с доработками.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="container section" id="price">
+      <div class="section-head">
+        <h2>Стоимость</h2>
+        <p class="lead">
+          Стоимость создания агента обсуждается индивидуально, потому что каждый агент собирается
+          под конкретного человека, его задачи и нужный уровень сложности.
+        </p>
+      </div>
+      <div class="price-box">
+        <div class="price-main">
+          <h3>Итоговая цена зависит от задачи</h3>
+          <p>
+            На стоимость влияет сложность агента, количество функций, сценариев и нужная глубина настройки.
+            Сначала мы обсуждаем, что именно должен делать помощник, а потом я называю точную цену создания.
+          </p>
+          <div class="price-note">
+            Создание агента оплачивается отдельно от технических расходов на AI-сервисы и сервер.
+          </div>
+        </div>
+        <div class="expenses">
+          <h3>Обязательные расходы</h3>
+          <div class="expense-item">
+            <span>Подписка на AI-сервисы</span>
+            <strong>2 500 ₽ в месяц</strong>
+          </div>
+          <div class="expense-item">
+            <span>Сервер для стабильной работы агента</span>
+            <strong>800 ₽ в месяц</strong>
+          </div>
+          <p class="lead">
+            Эти расходы нужны для стабильной работы агента и оплачиваются отдельно от стоимости создания.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="container section">
+      <div class="section-head">
+        <h2>Почему индивидуальный агент лучше обычного бота</h2>
+        <p class="lead">Разница в том, что индивидуальный агент проектируется вокруг вас и ваших задач.</p>
+      </div>
+      <div class="compare">
+        <article class="compare-card">
+          <h3>Обычный бот</h3>
+          <ul class="plain-list">
+            <li>работает по шаблону;</li>
+            <li>не учитывает личный стиль;</li>
+            <li>ограничен стандартными ответами;</li>
+            <li>плохо подходит под нестандартные задачи.</li>
+          </ul>
+        </article>
+        <article class="compare-card good">
+          <h3>Индивидуальный AI-агент</h3>
+          <ul class="plain-list">
+            <li>создается под конкретного человека;</li>
+            <li>учитывает сферу деятельности;</li>
+            <li>помогает с реальными ежедневными задачами;</li>
+            <li>может развиваться и дорабатываться.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="container final">
+      <div>
+        <h2>Хотите AI-агента под себя?</h2>
+        <p>Напишите мне в Telegram, и мы обсудим, какой помощник подойдет именно под ваши задачи.</p>
+      </div>
+      <a class="button button-primary" href="https://t.me/rouuz">Обсудить агента в Telegram</a>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">Индивидуальные AI-агенты в Telegram</div>
+  </footer>
+</body>
+</html>
